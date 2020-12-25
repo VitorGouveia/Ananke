@@ -296,8 +296,8 @@ main .licoes input {
     border: none;
     margin: 2% 0;
     font-weight: bold;
-    font-size: 2vmin;
-    padding: 2%;
+    font-size: 3vmin;
+    padding: 3% 2%;
     color: #999999;
     border-radius: 12px;
     box-shadow: inset -6px -6px 18px rgba(255, 255, 255, 0.3),

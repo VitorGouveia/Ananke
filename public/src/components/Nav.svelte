@@ -1,4 +1,6 @@
 <script>
+export let titleBar
+export let componentsBar
 
 function showDropdown() {
     const dropdown = document.querySelector(".dropdown");
@@ -22,7 +24,7 @@ function showDropdownDark() {
 
     <nav>
         <header>
-            <h1>INÍCIO</h1>
+            <h1> { titleBar.toUpperCase() } </h1>
             <svg on:click = { showDropdown } class="hamburger" 
                 xmlns="http://www.w3.org/2000/svg" 
                 width="40" 
@@ -41,16 +43,16 @@ function showDropdownDark() {
 
         <div class="dropdown">
             <div class="row">
-                <h1>PROPÓSITO</h1>
+                <h1> { componentsBar[0].toUpperCase() } </h1>
             </div>
             <div class="row">
-                <h1>ESPAÇO DO ALUNO</h1>
+                <h1> { componentsBar[1].toUpperCase() } </h1>
             </div>
             <div class="row">
-                <h1>CURSOS TÉCNICOS</h1>
+                <h1> { componentsBar[2].toUpperCase() } </h1>
             </div>
             <div class="row">
-                <h1>FALE CONOSCO</h1>
+                <h1> { componentsBar[3].toUpperCase() } </h1>
             </div>
         </div>
     </nav>

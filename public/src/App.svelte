@@ -1,7 +1,7 @@
 <script>
  import Nav from './components/Nav.svelte'
  import Header from './components/Header.svelte'
- import Index from './components/Index.svelte'
+ import Index from './pages/Index.svelte'
 </script>
 
 <svelte:head>
@@ -9,17 +9,16 @@
 </svelte:head>
 
 
-<Nav />
+<Nav titleBar = { 'início' } componentsBar = { ['propósito', 'espaço do aluno', 'cursos técnicos', 'fale conosco'] } />
 <Header />
 <Index />
 
     
 <style>
-    @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700&display=swap");
-
     :global(*) {
         margin: 0;
         padding: 0;
+        font-family: -apple-system, sans-serif;
         box-sizing: border-box;
     }
 
