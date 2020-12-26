@@ -4,11 +4,6 @@
  import Index from './pages/Index.svelte'
 </script>
 
-<svelte:head>
-  <title>etec jrm pwa | Svelte</title>
-</svelte:head>
-
-
 <Nav titleBar = { 'início' } componentsBar = { ['propósito', 'espaço do aluno', 'cursos técnicos', 'fale conosco'] } />
 <Header />
 <Index />
