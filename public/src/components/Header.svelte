@@ -1,3 +1,15 @@
+<script>
+export let frases
+
+const shuffle = Array => {
+    let randomIndex = Math.floor(Math.random() * Math.floor(Array.lenght))
+    return Array[randomIndex]
+}
+
+let shuffled = shuffle(frases)
+
+</script>
+
 <header>
     <div class="hero">
         <div class="separador separador1"></div>
@@ -16,7 +28,7 @@
             </g>  
         </svg>
         <h1>ETEC JORNALISTA ROBERTO MARINHO</h1>
-        <h2>ATRAVÉS DO CONHECIMENTO, CONQUISTA-SE O MUNDO</h2>
+        <h2> { shuffled } </h2>
         <div class="icons">
             <svg class="youtube"
                 xmlns="http://www.w3.org/2000/svg"

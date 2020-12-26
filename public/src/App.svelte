@@ -5,7 +5,7 @@
 </script>
 
 <Nav titleBar = { 'início' } componentsBar = { ['propósito', 'espaço do aluno', 'cursos técnicos', 'fale conosco'] } />
-<Header />
+<Header frases = { ['ATRÁVES DO CONHECIMENTO, CONSQUISTA-SE O MUNDO', 'EXEMPLO', 'MAIS UM EXEMPLO'] } />
 <Index />
 
     
