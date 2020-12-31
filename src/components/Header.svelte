@@ -1,6 +1,5 @@
 <script>
 export let frases
-
 </script>
 
 <header>
@@ -103,7 +102,7 @@ header .hero {
     align-items: center;
     width: 80%;
     flex-direction: column;
-    background-image: url('../../../assets/etecjrm.jpg');
+    background-image: url('/static/assets/etecjrm.jpg');
     background-position: center;
     box-shadow: -5px -5px 10px rgba(255, 255, 255, 0.05), 5px 5px 15px rgba(0, 0, 0, 0.5);
 }
