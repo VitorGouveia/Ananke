@@ -1,0 +1,57 @@
+name: Build/Deploy everything
+
+on:
+  push:
+    paths:
+      - ".github/workflows/**"
+      - "packages/**"
+    branches:
+      - "master"
+
+jobs:
+  installer_cli:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    
+    steps:
+      - name: Checkouts repository and Sets up deno
+        uses: jurassiscripts/setup-velociraptor@v2
+
+      - name: Build installer
+        working-directory: packages/daemon
+        run: vr build-installer
+  
+  # installer_web:
+  client:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3.3.0
+        with:
+          node-version: 16
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build client
+        working-directory: packages/client
+        run: yarn build
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4.3.4
+        with:
+          branch: production
+          folder: packages/client/public
+  # daemon:
