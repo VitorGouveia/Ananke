@@ -52,7 +52,7 @@ export const DownloadGithubFile = async ({
   );
 
   if (fileOpenError) throw fileOpenError;
-
+  // https://deno.land/manual/examples/fetch_data
   for await (const chunk of body!) {
     bytesReceived += chunk.length;
 

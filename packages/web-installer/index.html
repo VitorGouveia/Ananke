@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Download Now | Nix File Manager</title>
+
+  <link rel="stylesheet/less" type="text/css" href="./src/styles/global.less" />
+  <script src="https://cdn.jsdelivr.net/npm/less"></script>
+  <link rel="stylesheet" href="./src/styles/bruh.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/proxy-polyfill@0.3.0/proxy.min.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "lit": "https://esm.sh/lit?bundle",
+        "haunted": "https://esm.sh/haunted?bundle"
+      }
+    }
+  </script>
+  <script type="module" src="./src/app.js"></script>
+</head>
+<body>
+  <div id="splash">
+    <h1>splash screen</h1>
+  </div>
+
+  <app-terminal></app-terminal>
+</body>
+</html>

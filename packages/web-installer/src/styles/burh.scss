@@ -1,0 +1,39 @@
+@use "sass:math";
+
+//color: hsl(0,65%,70%)
+textarea,
+p,
+.rainbow {
+  animation: color 5s ease infinite;
+  font-weight: bold;
+  border: none;
+
+  &::selection {
+    // background: none;
+    // color: hsl(90, 100%, 60%);
+    color: black;
+    filter: hue-rotate(120);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: #000;
+    background: rgba(153, 255, 51, 0.99);
+  }
+}
+
+
+@keyframes color {
+  from {
+    filter: hue-rotate(0deg);
+  }
+
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+// $rainbow: 360;
+
+// @for $i from 1 through $rainbow {
+//   li:nth-child(#{$i})::selection {
+//     background-color: adjust-hue(red, math.div($i, $rainbow) * 360);
+//   }
+// }

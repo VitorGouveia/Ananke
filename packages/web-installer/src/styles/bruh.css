@@ -1,0 +1,27 @@
+textarea,
+p,
+.rainbow {
+  animation: color 5s ease infinite;
+  font-weight: bold;
+  border: none;
+}
+textarea::selection,
+p::selection,
+.rainbow::selection {
+  color: black;
+  filter: hue-rotate(120);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: #000;
+  background: rgba(153, 255, 51, 0.99);
+}
+
+@keyframes color {
+  from {
+    filter: hue-rotate(0deg);
+  }
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/*# sourceMappingURL=bruh.css.map */
