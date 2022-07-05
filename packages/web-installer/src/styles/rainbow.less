@@ -1,0 +1,32 @@
+.rainbow {
+  background: linear-gradient(150deg, #ef5350, #f48fb1, #7e57c2, #2196f3, #26c6da, #43a047, #eeff41, #f9a825, #ff5722);
+
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.rainbow {
+  animation: rotateHue 5s ease infinite;
+
+  &::selection {
+    color: black;
+    filter: hue-rotate(120);
+
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: #000;
+    background: rgba(153, 255, 51, 0.99);
+  }
+}
+
+
+@keyframes rotateHue {
+  from {
+    filter: hue-rotate(0deg);
+  }
+
+  to {
+    filter: hue-rotate(360deg);
+  }
+}

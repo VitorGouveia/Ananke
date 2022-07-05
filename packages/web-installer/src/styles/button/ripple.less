@@ -1,0 +1,33 @@
+.ripple-styles() {
+  color: #fff;
+  background-color: #6200ee;
+  padding: 1rem 2rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.3); /* black with 30% opacity */
+}
+
+.ripple {
+  .ripple-styles;
+
+  position: relative;
+  overflow: hidden;
+  transition: background 400ms;
+  
+  span, .ripple {
+    // styles
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.7);
+    
+    // logic
+    position: absolute;
+    transform: scale(0);
+    animation: ripple 600ms linear;
+  }
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}

@@ -1,4 +1,72 @@
 import { html } from "lit";
+import { virtual, useLayoutEffect, useCallback } from "haunted";
+
+const FillButton = virtual((content, afterContent) => {
+  const handleClickButton = useCallback((event) => {
+    const button = event.target;
+
+    if (button.getAttribute("data-active") === "true") {
+      button.setAttribute("data-active", "false");
+
+      return;
+    }
+
+    button.setAttribute("data-active", "true");
+  }, []);
+
+  return html`
+    <button @click=${handleClickButton} data-active="false" class="fill">
+      <label>${content}</label>
+
+      <span>${afterContent}</span>
+    </button>
+  `;
+});
+
+const LetteredButton = virtual((content) => {
+  useLayoutEffect(() => {
+    document.querySelectorAll(".lettered").forEach(
+      (button) =>
+        (button.innerHTML = `
+        <div>
+          <span>${button.textContent
+            .trim()
+            .split("")
+            .join("</span><span>")}</span>
+        </div>
+      `)
+    );
+  }, []);
+
+  return html` <button class="lettered">${content}</button> `;
+});
+
+const RippleButton = virtual((content) => {
+  const handleCreateRipple = (event) => {
+    const button = event.currentTarget;
+
+    const circle = document.createElement("span");
+    const diameter = Math.max(button.clientWidth, button.clientHeight);
+    const radius = diameter / 2;
+
+    circle.style.width = circle.style.height = `${diameter}px`;
+    circle.style.left = `${event.clientX - button.offsetLeft - radius}px`;
+    circle.style.top = `${event.clientY - button.offsetTop - radius}px`;
+    circle.classList.add("ripple");
+
+    const [ripple] = button.getElementsByClassName("ripple");
+
+    if (ripple) {
+      ripple.remove();
+    }
+
+    button.appendChild(circle);
+  };
+
+  return html`<button class="ripple" @click=${handleCreateRipple}>
+    ${content}
+  </button>`;
+});
 
 function ASCIIAnimation(animArray, DOMtarget, speed = animArray.length * 10) {
   var currentFrame = 0;
@@ -96,6 +164,12 @@ V::::::V           V::::::V              t:::::t                                
     commands: [
       html`<div>
         <h1>hello world</h1>
+
+        ${RippleButton("lets gooo")}
+        <br />
+        ${LetteredButton("Label")}
+        <br />
+        ${FillButton("hello", "world")}
       </div>`,
     ],
   },
@@ -136,7 +210,7 @@ V::::::V           V::::::V              t:::::t                                
         Lorem ipsum dolor sit amet consectetur adipisicing elit. Quos assumenda
         autem rem et sit ipsa eum magni esse iste eos, ex, numquam deleniti
         facilis velit ab quidem iure! Tenetur, ratione.
-      </div> `,
+      </div>`,
     ],
   },
   animation: {
@@ -203,6 +277,7 @@ window.addEventListener("keydown", (event) => {
   const component = await import("haunted").then((module) => module.component);
   const virtual = await import("haunted").then((module) => module.virtual);
   const useState = await import("haunted").then((module) => module.useState);
+  const useRef = await import("haunted").then((module) => module.useRef);
   const useEffect = await import("haunted").then((module) => module.useEffect);
   const useCallback = await import("haunted").then(
     (module) => module.useCallback
@@ -229,17 +304,25 @@ window.addEventListener("keydown", (event) => {
     const [command, setCommand] = useState("");
     const [commands, setCommands] = useState([]);
     const [history, setHistory] = useState([]);
+    const [autocomplete, setAutocomplete] = useState([]);
+    const debug = useRef(!!window.location.search.includes("debug"));
 
     const handleSubmit = useCallback(
-      (event) => {
-        event && event.preventDefault();
-        console.log(command);
+      (value) => {
+        document.querySelector("#bash").innerHTML = "";
+
         setCommand("");
-        setHistory([...history, command]);
+        setHistory([...history, value]);
 
         // check pipe operator in here, before splitting args
 
-        const [currentCommand, ...args] = command.split(" ");
+        // trim the command first
+        // const currentCommand = command.trim();
+
+        const currentCommand = value.trim();
+        // const [cmd, ...args] = command.trimStart().split(" ");
+
+        // const currentCommand = cmd.trim();
 
         if (!commandList[currentCommand]) {
           // check in the command list if any command looks like this one
@@ -287,7 +370,7 @@ window.addEventListener("keydown", (event) => {
           oldCommands.push(cmd);
         });
       },
-      [commands, command, setCommands]
+      [autocomplete, commands, command, setCommands]
     );
 
     useEffect(() => {
@@ -295,8 +378,32 @@ window.addEventListener("keydown", (event) => {
 
       const callback = (event) => {
         if (event.key === "Enter") {
+          if (document.activeElement.hasAttribute("data-autocomplete")) {
+            return;
+          }
+
           // put command in queue
-          handleSubmit();
+          handleSubmit(command);
+          return;
+        }
+
+        if (event.key === "Tab") {
+          if (autocomplete.length > 0) {
+            // select the elements
+            return;
+          }
+
+          event.preventDefault();
+
+          const similarCommands = Object.keys(commandList).filter((cmd) =>
+            cmd.startsWith(command.trim())
+          );
+
+          setAutocomplete(similarCommands);
+
+          // change color of the thing
+          document.querySelector("#bash").style.color = "green";
+
           return;
         }
 
@@ -333,7 +440,7 @@ window.addEventListener("keydown", (event) => {
       return () => {
         window.removeEventListener("keydown", callback);
       };
-    }, [commands, setCommands, command]);
+    });
 
     return html`
       <div>
@@ -343,10 +450,7 @@ window.addEventListener("keydown", (event) => {
             : html`<div id="text">${command.html}</div>`
         )}
 
-        <form
-          style="display: flex; align-items: flex-end;"
-          @submit=${handleSubmit}
-        >
+        <div style="display: flex; align-items: flex-end;">
           <label>
             vitor
             <span>${Folder()}</span>
@@ -360,29 +464,59 @@ window.addEventListener("keydown", (event) => {
           <div
             id="bash"
             contenteditable="true"
-            .value=${command}
-            @input=${(event) => setCommand(event.target.innerText)}
+            style="caret-color: #fff; outline: none;"
+            @blur=${() => document.querySelector("#bash").focus()}
+            @input=${(event) => {
+              setCommand(event.target.innerText);
+              // highlight
+
+              const completableWords = [
+                ...Object.keys(commandList),
+                ...history,
+              ];
+
+              const perfectWordMatch = [...new Set(completableWords)].find(
+                (word) => event.target.innerText.trim() === word
+              );
+
+              if (perfectWordMatch) {
+                event.target.style.color = "green";
+              } else {
+                event.target.style.color = "red";
+              }
+            }}
             style="display: flex; align-items: flex-end;"
-          >
-            <!-- change text color if command exists -->
-          </div>
+          ></div>
+        </div>
 
-          <!-- <span class="blink">|</span> -->
-          <!-- the input should never lose focus -->
-          <input
-            style="position: absolute; top: -9999px; left: -99999px;"
-            id="command-input"
-            placeholder=""
-            type="text"
-            .value=${command}
-            @input=${(event) => setCommand(event.target.value)}
-          />
-        </form>
+        ${autocomplete.map(
+          (command) =>
+            html`
+              <button
+                data-autocomplete
+                @click=${(event) => {
+                  setAutocomplete([]);
+                  setCommand(event.target.innerText.trim());
+                }}
+                @focus=${(event) => {
+                  document.querySelector("#bash").innerText =
+                    event.target.innerText.trim();
+                  // handleSubmit(event.target.innerText);
+                }}
+              >
+                ${command}
+              </button>
+            `
+        )}
+        ${debug.current
+          ? html`
+              <h5>History</h5>
 
-        <h5>History</h5>
-        <ul>
-          ${history.map((command) => html`<li>${command}</li>`)}
-        </ul>
+              <ul>
+                ${history.map((command) => html`<li>${command}</li>`)}
+              </ul>
+            `
+          : ""}
       </div>
     `;
   }
