@@ -1,177 +1,136 @@
-import { html } from "lit";
-import { virtual, useLayoutEffect, useCallback } from "haunted";
+import { Shortcuts } from "./functions/shortcut.js";
 
-const FillButton = virtual((content, afterContent) => {
-  const handleClickButton = useCallback((event) => {
-    const button = event.target;
+// @TODO: create book
+// @TODO: manage system partitions and files
 
-    if (button.getAttribute("data-active") === "true") {
-      button.setAttribute("data-active", "false");
+const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
-      return;
-    }
+const shortcut = new Shortcuts();
 
-    button.setAttribute("data-active", "true");
-  }, []);
+let SELECTED_TERMINAL_ID = 0;
 
-  return html`
-    <button @click=${handleClickButton} data-active="false" class="fill">
-      <label>${content}</label>
+function* TerminalID() {
+  var index = 0;
 
-      <span>${afterContent}</span>
-    </button>
-  `;
-});
-
-const LetteredButton = virtual((content) => {
-  useLayoutEffect(() => {
-    document.querySelectorAll(".lettered").forEach(
-      (button) =>
-        (button.innerHTML = `
-        <div>
-          <span>${button.textContent
-            .trim()
-            .split("")
-            .join("</span><span>")}</span>
-        </div>
-      `)
-    );
-  }, []);
-
-  return html` <button class="lettered">${content}</button> `;
-});
-
-const RippleButton = virtual((content) => {
-  const handleCreateRipple = (event) => {
-    const button = event.currentTarget;
-
-    const circle = document.createElement("span");
-    const diameter = Math.max(button.clientWidth, button.clientHeight);
-    const radius = diameter / 2;
-
-    circle.style.width = circle.style.height = `${diameter}px`;
-    circle.style.left = `${event.clientX - button.offsetLeft - radius}px`;
-    circle.style.top = `${event.clientY - button.offsetTop - radius}px`;
-    circle.classList.add("ripple");
-
-    const [ripple] = button.getElementsByClassName("ripple");
-
-    if (ripple) {
-      ripple.remove();
-    }
-
-    button.appendChild(circle);
-  };
-
-  return html`<button class="ripple" @click=${handleCreateRipple}>
-    ${content}
-  </button>`;
-});
-
-function ASCIIAnimation(animArray, DOMtarget, speed = animArray.length * 10) {
-  var currentFrame = 0;
-  for (var i = 0; i < animArray.length; i++) {
-    animArray[i] = animArray[i].replace(/ /g, "&nbsp;");
-    animArray[i] = "<pre>" + animArray[i] + "</pre>";
-  }
-  DOMtarget.innerHTML = animArray[0];
-  currentFrame++;
-  this.animation = setInterval(function () {
-    DOMtarget.innerHTML = animArray[currentFrame];
-    currentFrame++;
-    if (currentFrame >= animArray.length) currentFrame = 0;
-  }, speed);
-  this.getCurrentFrame = function () {
-    return currentFrame;
-  };
+  while (true) yield index++;
 }
 
-const timer = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-function levenshteinDistance(s, t) {
-  if (s.length === 0) return t.length;
-  if (t.length === 0) return s.length;
+const terminalIDGenerator = TerminalID();
 
-  return Math.min(
-    levenshteinDistance(s.substr(1), t) + 1,
-    levenshteinDistance(t.substr(1), s) + 1,
-    levenshteinDistance(s.substr(1), t.substr(1)) + (s[0] !== t[0] ? 1 : 0)
-  );
-}
+const MOD = "ctrl";
+// @TODO: listen to horizontal arrows for custom block cursor;
+
+/**
+ * @type {Record<string, { key: string, callback: (event: KeyboardEvent) => void }>}
+ */
+const GLOBAL_SHORTCUTS = {
+  create_new_terminal: {
+    key: `${MOD}+enter`,
+    callback: (event) => {
+      event.preventDefault();
+      console.log("open new terminal");
+    },
+  },
+  open_fullscreen_terminal: {
+    key: `${MOD}+shift+f`,
+    callback: (event) => {
+      event.preventDefault();
+      console.log("open fullscreen terminal");
+    },
+  },
+  kill_window: {
+    key: `ctrl+shift+c`,
+    callback: (event) => {
+      event.preventDefault();
+      console.log("killing selected window!");
+    },
+  },
+};
+
+Object.entries(GLOBAL_SHORTCUTS).forEach(([_, { key, callback }]) => {
+  shortcut.add(key, callback);
+});
+
+/** SPLASH SCREEN */
+setTimeout(() => {
+  // document.querySelector("#splash").setAttribute("hidden", "true");
+}, 2000);
+
+import {
+  html,
+  component,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+} from "./deps.js";
+
+import { ASCIIAnimation } from "./functions/ascii-animation.js";
+
+// @TODO: component imports must be dynamic!
+import { Button } from "./components/button/index.js";
+
+// @TODO: add // @ts-check in all js files
+import { levenshteinDistance } from "./functions/levenshtein.js";
 
 /**
  * this should really be a function that receives screen APIs
  * such as clear terminal, open file, etc e etc
  */
-const commandList = {
+const OLD_COMMANDS = {
   help: {
     gui: false,
     textSpeed: 50,
     clear: false,
     // prettier-ignore
     commands: [`
-                                                                                                                                                                                                                                   
-                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                    
 VVVVVVVV           VVVVVVVV  iiii           tttt                                                            GGGGGGGGGGGGG                                                                                  iiii                    
 V::::::V           V::::::V i::::i       ttt:::t                                                         GGG::::::::::::G                                                                                 i::::i                   
 V::::::V           V::::::V  iiii        t:::::t                                                       GG:::::::::::::::G                                                                                  iiii                    
 V::::::V           V::::::V              t:::::t                                                      G:::::GGGGGGGG::::G                                                                                                          
- V:::::V           V:::::V iiiiiii ttttttt:::::ttttttt       ooooooooooo   rrrrr   rrrrrrrrr         G:::::G       GGGGGG   ooooooooooo   uuuuuu    uuuuuu  vvvvvvv           vvvvvvv    eeeeeeeeeeee    iiiiiii   aaaaaaaaaaaaa   
+  V:::::V           V:::::V iiiiiii ttttttt:::::ttttttt       ooooooooooo   rrrrr   rrrrrrrrr         G:::::G       GGGGGG   ooooooooooo   uuuuuu    uuuuuu  vvvvvvv           vvvvvvv    eeeeeeeeeeee    iiiiiii   aaaaaaaaaaaaa   
   V:::::V         V:::::V  i:::::i t:::::::::::::::::t     oo:::::::::::oo r::::rrr:::::::::r       G:::::G               oo:::::::::::oo u::::u    u::::u   v:::::v         v:::::v   ee::::::::::::ee  i:::::i   a::::::::::::a  
-   V:::::V       V:::::V    i::::i t:::::::::::::::::t    o:::::::::::::::or:::::::::::::::::r      G:::::G              o:::::::::::::::ou::::u    u::::u    v:::::v       v:::::v   e::::::eeeee:::::ee i::::i   aaaaaaaaa:::::a 
+    V:::::V       V:::::V    i::::i t:::::::::::::::::t    o:::::::::::::::or:::::::::::::::::r      G:::::G              o:::::::::::::::ou::::u    u::::u    v:::::v       v:::::v   e::::::eeeee:::::ee i::::i   aaaaaaaaa:::::a 
     V:::::V     V:::::V     i::::i tttttt:::::::tttttt    o:::::ooooo:::::orr::::::rrrrr::::::r     G:::::G    GGGGGGGGGGo:::::ooooo:::::ou::::u    u::::u     v:::::v     v:::::v   e::::::e     e:::::e i::::i            a::::a 
-     V:::::V   V:::::V      i::::i       t:::::t          o::::o     o::::o r:::::r     r:::::r     G:::::G    G::::::::Go::::o     o::::ou::::u    u::::u      v:::::v   v:::::v    e:::::::eeeee::::::e i::::i     aaaaaaa:::::a 
+      V:::::V   V:::::V      i::::i       t:::::t          o::::o     o::::o r:::::r     r:::::r     G:::::G    G::::::::Go::::o     o::::ou::::u    u::::u      v:::::v   v:::::v    e:::::::eeeee::::::e i::::i     aaaaaaa:::::a 
       V:::::V V:::::V       i::::i       t:::::t          o::::o     o::::o r:::::r     rrrrrrr     G:::::G    GGGGG::::Go::::o     o::::ou::::u    u::::u       v:::::v v:::::v     e:::::::::::::::::e  i::::i   aa::::::::::::a 
-       V:::::V:::::V        i::::i       t:::::t          o::::o     o::::o r:::::r                 G:::::G        G::::Go::::o     o::::ou::::u    u::::u        v:::::v:::::v      e::::::eeeeeeeeeee   i::::i  a::::aaaa::::::a 
+        V:::::V:::::V        i::::i       t:::::t          o::::o     o::::o r:::::r                 G:::::G        G::::Go::::o     o::::ou::::u    u::::u        v:::::v:::::v      e::::::eeeeeeeeeee   i::::i  a::::aaaa::::::a 
         V:::::::::V         i::::i       t:::::t    tttttto::::o     o::::o r:::::r                  G:::::G       G::::Go::::o     o::::ou:::::uuuu:::::u         v:::::::::v       e:::::::e            i::::i a::::a    a:::::a 
-         V:::::::V         i::::::i      t::::::tttt:::::to:::::ooooo:::::o r:::::r                   G:::::GGGGGGGG::::Go:::::ooooo:::::ou:::::::::::::::uu        v:::::::v        e::::::::e          i::::::ia::::a    a:::::a 
+          V:::::::V         i::::::i      t::::::tttt:::::to:::::ooooo:::::o r:::::r                   G:::::GGGGGGGG::::Go:::::ooooo:::::ou:::::::::::::::uu        v:::::::v        e::::::::e          i::::::ia::::a    a:::::a 
           V:::::V          i::::::i      tt::::::::::::::to:::::::::::::::o r:::::r                    GG:::::::::::::::Go:::::::::::::::o u:::::::::::::::u         v:::::v          e::::::::eeeeeeee  i::::::ia:::::aaaa::::::a 
-           V:::V           i::::::i        tt:::::::::::tt oo:::::::::::oo  r:::::r                      GGG::::::GGG:::G oo:::::::::::oo   uu::::::::uu:::u          v:::v            ee:::::::::::::e  i::::::i a::::::::::aa:::a
+            V:::V           i::::::i        tt:::::::::::tt oo:::::::::::oo  r:::::r                      GGG::::::GGG:::G oo:::::::::::oo   uu::::::::uu:::u          v:::v            ee:::::::::::::e  i::::::i a::::::::::aa:::a
             VVV            iiiiiiii          ttttttttttt     ooooooooooo    rrrrrrr                         GGGGGG   GGGG   ooooooooooo       uuuuuuuu  uuuu           vvv               eeeeeeeeeeeeee  iiiiiiii  aaaaaaaaaa  aaaa
-                                                                                                                                                                                                                                   
-                                                                                                                                                                                                                                   
-                                                                                                                                                                                                                                   
-                                                                                                                                                                                                                                   
-                                                                                                                                                                                                                                   
-                                                                                                                                                                                                                                   
-                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                    
     `,
   `
 ██    ██ ██ ████████  ██████  ██████       ██████   ██████  ██    ██ ██    ██ ███████ ██  █████  
 ██    ██ ██    ██    ██    ██ ██   ██     ██       ██    ██ ██    ██ ██    ██ ██      ██ ██   ██ 
 ██    ██ ██    ██    ██    ██ ██████      ██   ███ ██    ██ ██    ██ ██    ██ █████   ██ ███████ 
- ██  ██  ██    ██    ██    ██ ██   ██     ██    ██ ██    ██ ██    ██  ██  ██  ██      ██ ██   ██ 
+  ██  ██  ██    ██    ██    ██ ██   ██     ██    ██ ██    ██ ██    ██  ██  ██  ██      ██ ██   ██ 
   ████   ██    ██     ██████  ██   ██      ██████   ██████   ██████    ████   ███████ ██ ██   ██ 
-                                                                                                 
-                                                                                                       
+                                                                                                  
+                                                                                                        
   `,
   `
 ██▒   █▓ ██▓▄▄▄█████▓ ▒█████   ██▀███       ▄████  ▒█████   █    ██  ██▒   █▓▓█████  ██▓ ▄▄▄      
 ▓██░   █▒▓██▒▓  ██▒ ▓▒▒██▒  ██▒▓██ ▒ ██▒    ██▒ ▀█▒▒██▒  ██▒ ██  ▓██▒▓██░   █▒▓█   ▀ ▓██▒▒████▄    
- ▓██  █▒░▒██▒▒ ▓██░ ▒░▒██░  ██▒▓██ ░▄█ ▒   ▒██░▄▄▄░▒██░  ██▒▓██  ▒██░ ▓██  █▒░▒███   ▒██▒▒██  ▀█▄  
+  ▓██  █▒░▒██▒▒ ▓██░ ▒░▒██░  ██▒▓██ ░▄█ ▒   ▒██░▄▄▄░▒██░  ██▒▓██  ▒██░ ▓██  █▒░▒███   ▒██▒▒██  ▀█▄  
   ▒██ █░░░██░░ ▓██▓ ░ ▒██   ██░▒██▀▀█▄     ░▓█  ██▓▒██   ██░▓▓█  ░██░  ▒██ █░░▒▓█  ▄ ░██░░██▄▄▄▄██ 
-   ▒▀█░  ░██░  ▒██▒ ░ ░ ████▓▒░░██▓ ▒██▒   ░▒▓███▀▒░ ████▓▒░▒▒█████▓    ▒▀█░  ░▒████▒░██░ ▓█   ▓██▒
-   ░ ▐░  ░▓    ▒ ░░   ░ ▒░▒░▒░ ░ ▒▓ ░▒▓░    ░▒   ▒ ░ ▒░▒░▒░ ░▒▓▒ ▒ ▒    ░ ▐░  ░░ ▒░ ░░▓   ▒▒   ▓▒█░
-   ░ ░░   ▒ ░    ░      ░ ▒ ▒░   ░▒ ░ ▒░     ░   ░   ░ ▒ ▒░ ░░▒░ ░ ░    ░ ░░   ░ ░  ░ ▒ ░  ▒   ▒▒ ░
-     ░░   ▒ ░  ░      ░ ░ ░ ▒    ░░   ░    ░ ░   ░ ░ ░ ░ ▒   ░░░ ░ ░      ░░     ░    ▒ ░  ░   ▒   
+    ▒▀█░  ░██░  ▒██▒ ░ ░ ████▓▒░░██▓ ▒██▒   ░▒▓███▀▒░ ████▓▒░▒▒█████▓    ▒▀█░  ░▒████▒░██░ ▓█   ▓██▒
+    ░ ▐░  ░▓    ▒ ░░   ░ ▒░▒░▒░ ░ ▒▓ ░▒▓░    ░▒   ▒ ░ ▒░▒░▒░ ░▒▓▒ ▒ ▒    ░ ▐░  ░░ ▒░ ░░▓   ▒▒   ▓▒█░
+    ░ ░░   ▒ ░    ░      ░ ▒ ▒░   ░▒ ░ ▒░     ░   ░   ░ ▒ ▒░ ░░▒░ ░ ░    ░ ░░   ░ ░  ░ ▒ ░  ▒   ▒▒ ░
+      ░░   ▒ ░  ░      ░ ░ ░ ▒    ░░   ░    ░ ░   ░ ░ ░ ░ ▒   ░░░ ░ ░      ░░     ░    ▒ ░  ░   ▒   
       ░   ░               ░ ░     ░              ░     ░ ░     ░           ░     ░  ░ ░        ░  ░
-     ░                                                                    ░                        
+      ░                                                                    ░                        
   `],
-  },
-  emacs: {
-    gui: true,
-    textSpeed: 0,
-    clear: true,
-    commands: [
-      html`<div>
-        <h1>hello world</h1>
-
-        ${RippleButton("lets gooo")}
-        <br />
-        ${LetteredButton("Label")}
-        <br />
-        ${FillButton("hello", "world")}
-      </div>`,
-    ],
   },
   "hello world": {
     gui: false,
@@ -184,22 +143,6 @@ V::::::V           V::::::V              t:::::t                                
     textSpeed: 0,
     clear: true,
     commands: [],
-  },
-  echo: {
-    gui: false,
-    textSpeed: 0,
-    clear: false,
-    commands: [
-      (...args) => {
-        const VARS = {
-          $HOME: "/home/vitor",
-        };
-
-        const replacedArgs = args.map((arg) => VARS[arg] || arg);
-
-        return `${replacedArgs.join(" ")}`;
-      },
-    ],
   },
   lolcat: {
     gui: false,
@@ -219,7 +162,7 @@ V::::::V           V::::::V              t:::::t                                
     clear: false,
     commands: [
       (() => {
-        var animArray4 = [
+        const animation = [
           "[>        ]",
           "[=>       ]",
           "[==>      ]",
@@ -231,163 +174,228 @@ V::::::V           V::::::V              t:::::t                                
           "[========>]",
         ];
 
-        function makeDiv() {
-          return document.createElement("div");
-        }
+        const container = document.createElement("div");
 
-        const container = makeDiv();
+        new ASCIIAnimation(container, {
+          animation,
+          speed: 50,
+        });
 
-        new ASCIIAnimation(animArray4, container);
         return html`${container}`;
       })(),
     ],
   },
 };
 
-setTimeout(() => {
-  document.querySelector("#splash").setAttribute("hidden", "true");
-}, 2000);
+/** @type {Record<string, import("./commands/command").Command>} */
+const commandList = {
+  ...(await import("./commands/clear.js")),
+  ...(await import("./commands/echo.js")),
+  ...(await import("./commands/emacs.js")),
+  ...(await import("./commands/ls.js")),
+  ...(await import("./commands/cd.js")),
+};
 
-window.addEventListener("keydown", (event) => {
-  // focus the input if not focused
-  // const inputIsFocused =
-  //   document.activeElement === document.querySelector("#bash");
+const { Folder } = await import("./components/folder.js");
 
-  // if (!inputIsFocused) {
-  //   document.querySelector("#bash").focus();
-  // }
+/**
+ *
+ * @param {HTMLElement} element
+ * @returns
+ */
+function Terminal(element) {
+  const id = useRef(terminalIDGenerator.next().value);
 
-  // on arrow change blink character placement
+  const [command, setCommand] = useState("");
+  const [commands, setCommands] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [autocomplete, setAutocomplete] = useState([]);
+  const debug = useRef(!!window.location.search.includes("debug"));
 
-  // listen for TAB for word completion and suggestion
-  // listen for CTRL + C for exit command
-  // listen for CTRL + Z to suspend
+  const getBashSnapshot = useCallback(
+    (value) => {
+      /**
+       *
+       * @returns {"green" | "red"}
+       */
+      const bashColor = () => {
+        const completableWords = [...Object.keys(commandList), ...history];
 
-  // super + enter to create new terminal with tiling window manager
-  // super + t to open transparent fullscreen terminal
-  // super + c to close
+        const perfectWordMatch = [...new Set(completableWords)].find((word) =>
+          value.trim().includes(word.trim())
+        );
 
-  if (event.ctrlKey && event.key === "c") {
-    // clean shit
-    event.preventDefault();
-  }
-});
+        return perfectWordMatch ? "green" : "red";
+      };
 
-(async () => {
-  const component = await import("haunted").then((module) => module.component);
-  const virtual = await import("haunted").then((module) => module.virtual);
-  const useState = await import("haunted").then((module) => module.useState);
-  const useRef = await import("haunted").then((module) => module.useRef);
-  const useEffect = await import("haunted").then((module) => module.useEffect);
-  const useCallback = await import("haunted").then(
-    (module) => module.useCallback
+      const bashSnapshot = html`
+        <div style="display: flex; align-items: center;">
+          <p>
+            vitor
+            <span>${Folder()}</span>
+
+            <span> Nix/packages </span>
+
+            on master
+            <span>${">"}</span>
+          </p>
+
+          <span style="width: 5px !important; height: 100%;"></span>
+
+          <div
+            style=${`
+            caret-color: #fff;
+            outline: none;
+            color: ${bashColor()}
+          `}
+          >
+            ${value}
+          </div>
+        </div>
+      `;
+
+      return bashSnapshot;
+    },
+    [commandList, history]
   );
 
-  const Folder = virtual(() => {
-    return html`
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 512 512"
-        width="16"
-        height="16"
-        fill="#fafafa"
-      >
-        <!--! Font Awesome Pro 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->
-        <path
-          d="M464 96h-192l-64-64h-160C21.5 32 0 53.5 0 80V160h512V144C512 117.5 490.5 96 464 96zM0 432C0 458.5 21.5 480 48 480h416c26.5 0 48-21.5 48-48V192H0V432z"
-        />
-      </svg>
-    `;
-  });
+  /**
+   *
+   * @param {ClipboardEvent} event
+   */
+  const handlePaste = (event) => {
+    event.stopPropagation();
+    event.preventDefault();
 
-  function Terminal() {
-    const [command, setCommand] = useState("");
-    const [commands, setCommands] = useState([]);
-    const [history, setHistory] = useState([]);
-    const [autocomplete, setAutocomplete] = useState([]);
-    const debug = useRef(!!window.location.search.includes("debug"));
+    const pastedData = event.clipboardData.getData("text");
 
-    const handleSubmit = useCallback(
-      (value) => {
-        document.querySelector("#bash").innerHTML = "";
+    element.querySelector("#bash").textContent = pastedData;
+    setCommand(pastedData);
+  };
 
-        setCommand("");
-        setHistory([...history, value]);
+  // prettier-ignore
+  const handleSubmit = useCallback((_value) => {
+    /** @type {string} */
+    const value = _value;
 
-        // check pipe operator in here, before splitting args
+    element.querySelector("#bash").textContent = "";
 
-        // trim the command first
-        // const currentCommand = command.trim();
+    setCommand("");
+    setHistory([...history, value]);
 
-        const currentCommand = value.trim();
-        // const [cmd, ...args] = command.trimStart().split(" ");
+    // echo "hello world" | lolcat
 
-        // const currentCommand = cmd.trim();
+    const [cmd, ...args] = command.trimStart().split(" ");
+    const currentCommand = cmd;
 
-        if (!commandList[currentCommand]) {
-          // check in the command list if any command looks like this one
-          const commandListArray = Object.keys(commandList);
+    const bashSnapshot = getBashSnapshot(value);
 
-          const similarityHeap = commandListArray.map((command) =>
-            levenshteinDistance(command, currentCommand)
-          );
+    if (!commandList[currentCommand]) {
+      // find a similar command
+      const commandListArray = Object.keys(commandList);
 
-          // get the lowest number in the array
-          const indexofLowestNumberCommand = similarityHeap.indexOf(
-            Math.min(...similarityHeap)
-          );
+      const similarityHeap = commandListArray.map((command) =>
+        levenshteinDistance(command, currentCommand)
+      );
 
-          const closestCommand = commandListArray[indexofLowestNumberCommand];
+      const SIMILARITY_THRESHOLD = 2;
 
-          setCommands([
-            ...commands,
-            {
-              type: "text",
-              html: `command ${currentCommand} doesnt exist, did you mean ${closestCommand}`,
-            },
-          ]);
-          return;
-        }
+      if (Math.min(...similarityHeap) > SIMILARITY_THRESHOLD) {
+        setCommands([
+          ...commands,
+          {
+            type: "text",
+            html: [bashSnapshot, `command ${currentCommand} doesnt exist`],
+          },
+        ]);
 
-        const commandExec = commandList[currentCommand];
-        let oldCommands = [...commands];
+        return;
+      }
 
-        if (commandExec.clear) {
-          setCommands([]);
-          oldCommands = [];
-        }
+      // get the lowest number in the array
+      const indexofLowestNumberCommand = similarityHeap.indexOf(
+        Math.min(...similarityHeap)
+      );
 
-        commandExec.commands.forEach(async (command, index) => {
-          await timer(index * commandExec.textSpeed);
+      const closestCommand = commandListArray[indexofLowestNumberCommand];
 
-          const cmd = {
-            type: commandExec.gui ? "virtual" : "text",
-            html: typeof command === "function" ? command(...args) : command,
-          };
+      setCommands([
+        ...commands,
+        {
+          type: "text",
+          html: [bashSnapshot, `command ${currentCommand} doesnt exist, did you mean ${closestCommand}`],
+        },
+      ]);
 
-          setCommands([...oldCommands, cmd]);
+      return;
+    }
 
-          oldCommands.push(cmd);
-        });
-      },
-      [autocomplete, commands, command, setCommands]
-    );
+    const commandEXE = commandList[currentCommand];
 
-    useEffect(() => {
-      document.querySelector("#bash").focus();
+    const result = commandEXE.render(...args);
 
-      const callback = (event) => {
-        if (event.key === "Enter") {
+    /** @type {{ type: "virtual" | "text", html: string }} */
+    const commandObj = {
+      type: commandEXE.isGUI ? "virtual" : "text",
+      html: [bashSnapshot, result],
+    };
+
+    if (commandEXE.clear) {
+      setCommands([commandObj]);
+    } else {
+      setCommands([...commands, commandObj]);
+    }
+
+    // if (!commandList[currentCommand]) {
+    //   // check in the command list if any command looks like this one
+    //   const commandListArray = Object.keys(commandList);
+
+    //   const similarityHeap = commandListArray.map((command) =>
+    //     levenshteinDistance(command, currentCommand)
+    //   );
+
+    //   // get the lowest number in the array
+    //   const indexofLowestNumberCommand = similarityHeap.indexOf(
+    //     Math.min(...similarityHeap)
+    //   );
+
+    //   const closestCommand = commandListArray[indexofLowestNumberCommand];
+
+    //   setCommands([
+    //     ...commands,
+    //     {
+    //       type: "text",
+    //       html: `command ${currentCommand} doesnt exist, did you mean ${closestCommand}`,
+    //     },
+    //   ]);
+    //   return;
+    // }
+  }, [autocomplete, commands, command, setCommands]);
+
+  useEffect(() => {
+    element.querySelector("#bash").focus();
+  }, []);
+
+  // <KEYBINDINGS></KEYBINDINGS>
+  useEffect(() => {
+    /** @type {Record<string, { key: string, callback: (event: KeyboardEvent) => void }>} */
+    const LOCAL_SHORTCUTS = {
+      submit: {
+        key: "enter",
+        callback: (event) => {
+          event.preventDefault();
+
           if (document.activeElement.hasAttribute("data-autocomplete")) {
             return;
           }
 
           // put command in queue
           handleSubmit(command);
-          return;
-        }
-
-        if (event.key === "Tab") {
+        },
+      },
+      autocomplete: {
+        key: "tab",
+        callback: (event) => {
           if (autocomplete.length > 0) {
             // select the elements
             return;
@@ -402,129 +410,194 @@ window.addEventListener("keydown", (event) => {
           setAutocomplete(similarCommands);
 
           // change color of the thing
-          document.querySelector("#bash").style.color = "green";
+          element.querySelector("#bash").style.color = "green";
+        },
+      },
+      cancel: {
+        key: "ctrl+c",
+        callback: (event) => {
+          // if text is selected then dont change default behaviour
+          if (!window.getSelection().isCollapsed) {
+            return;
+          }
 
-          return;
-        }
+          event.preventDefault();
 
-        if (event.ctrlKey && event.key === "c") {
+          const bashSnapshot = getBashSnapshot(command);
+
           setCommands([
             ...commands,
             {
-              type: "virtual",
-              html: html`<form style="display: flex; align-items: flex-end;">
-                <label>
-                  vitor
-                  <span>${Folder()}</span>
-
-                  <span> Nix/packages </span>
-
-                  on master
-                  <span>${">"}</span>
-                </label>
-
-                <span style="width: 5px !important; height: 100%;"></span>
-
-                <div style="display: flex; align-items: flex-end;">
-                  ${command}
-                </div>
-              </form>`,
+              type: "text",
+              html: [bashSnapshot, ""],
             },
           ]);
+
           setCommand("");
-        }
-      };
+          element.querySelector("#bash").textContent = "";
+        },
+      },
+      clear: {
+        key: "ctrl+l",
+        callback: (event) => {
+          event.preventDefault();
 
-      window.addEventListener("keydown", callback);
+          setCommands([]);
+        },
+      },
+      suspend: {
+        key: "ctrl+x",
+        callback: (event) => {
+          event.preventDefault();
 
-      return () => {
-        window.removeEventListener("keydown", callback);
-      };
+          element.querySelector("#bash").textContent = "";
+          setCommand("");
+        },
+      },
+    };
+
+    // add keybinding for arrow up and down
+    // search for commands in history
+
+    // prettier-ignore
+    Object.entries(LOCAL_SHORTCUTS).forEach(([_, { key, callback }]) => {
+      shortcut.add(key, callback);
     });
 
-    return html`
-      <div>
-        ${commands.map((command) =>
-          command.type === "virtual"
-            ? html`${command.html}`
-            : html`<div id="text">${command.html}</div>`
-        )}
+    const forbiddenShortcuts = Object.values({
+      ...LOCAL_SHORTCUTS,
+      ...GLOBAL_SHORTCUTS,
+    }).map(({ key }) => {
+      return key;
+    });
 
-        <div style="display: flex; align-items: flex-end;">
-          <label>
-            vitor
-            <span>${Folder()}</span>
+    const bash = element.querySelector("#bash");
 
-            <span> Nix/packages </span>
+    /**
+     *
+     * @param {KeyboardEvent} event
+     */
+    const handleKeydown = (event) => {
+      const key = event.key.toLowerCase();
+      // check if not forbidden shortcut
 
-            on master
-            <span>${">"}</span>
-          </label>
-          <span style="width: 5px !important; height: 100%;"></span>
-          <div
-            id="bash"
-            contenteditable="true"
-            style="caret-color: #fff; outline: none;"
-            @blur=${() => document.querySelector("#bash").focus()}
-            @input=${(event) => {
-              setCommand(event.target.innerText);
-              // highlight
+      if (alphabet.includes(key) && !(document.activeElement === bash)) {
+        event.preventDefault();
 
-              const completableWords = [
-                ...Object.keys(commandList),
-                ...history,
-              ];
+        element.querySelector("#bash").focus();
+      }
+    };
 
-              const perfectWordMatch = [...new Set(completableWords)].find(
-                (word) => event.target.innerText.trim() === word
-              );
+    if (SELECTED_TERMINAL_ID === id.current) {
+      window.addEventListener("keydown", handleKeydown);
+    }
 
-              if (perfectWordMatch) {
-                event.target.style.color = "green";
-              } else {
-                event.target.style.color = "red";
-              }
-            }}
-            style="display: flex; align-items: flex-end;"
-          ></div>
-        </div>
+    return () => {
+      Object.entries(LOCAL_SHORTCUTS).forEach(([name, { key }]) => {
+        shortcut.remove(key);
+      });
 
-        ${autocomplete.map(
-          (command) =>
-            html`
-              <button
-                data-autocomplete
-                @click=${(event) => {
-                  setAutocomplete([]);
-                  setCommand(event.target.innerText.trim());
-                }}
-                @focus=${(event) => {
-                  document.querySelector("#bash").innerText =
-                    event.target.innerText.trim();
-                  // handleSubmit(event.target.innerText);
-                }}
-              >
-                ${command}
-              </button>
-            `
-        )}
-        ${debug.current
-          ? html`
-              <h5>History</h5>
+      if (SELECTED_TERMINAL_ID === id.current) {
+        window.removeEventListener("keydown", handleKeydown);
+      }
+    };
+  }, [
+    command,
+    commands,
+    setCommands,
+    handleSubmit,
+    autocomplete,
+    setAutocomplete,
+  ]);
 
-              <ul>
-                ${history.map((command) => html`<li>${command}</li>`)}
-              </ul>
-            `
-          : ""}
+  return html`
+    <section>
+      ${commands.map((command) => {
+        const [bashSnapshot, commandResult] = command.html;
+
+        /** @type {Record<string, string>} */
+        const COMMAND_RENDER_METHODS = {
+          virtual: html` ${commandResult} `,
+          text: html`
+            ${bashSnapshot}
+            <div class="text">${commandResult}</div>
+          `,
+        };
+
+        if (!COMMAND_RENDER_METHODS[command.type]) {
+          return html` sorry could not render your bash! `;
+        }
+
+        return COMMAND_RENDER_METHODS[command.type];
+      })}
+
+      <div style="display: flex; align-items: center;">
+        <p>vitor ${Folder()} Nix/packages on master ${">"}</p>
+        <span style="width: 5px !important; height: 100%;"></span>
+        <div
+          id="bash"
+          contenteditable="true"
+          style="
+            min-width: 50px;
+            caret-color: #fff; outline: none;
+          "
+          @paste=${handlePaste}
+          @input=${(event) => {
+            setCommand(event.target.innerText);
+            // highlight
+
+            const completableWords = [...Object.keys(commandList), ...history];
+
+            const perfectWordMatch = [...new Set(completableWords)].find(
+              (word) => event.target.innerText.trim().includes(word.trim())
+            );
+
+            if (perfectWordMatch) {
+              event.target.style.color = "green";
+            } else {
+              event.target.style.color = "red";
+            }
+          }}
+        ></div>
       </div>
-    `;
-  }
 
-  customElements.define(
-    "app-terminal",
-    component(Terminal, {
-      useShadowDOM: false,
-    })
-  );
-})();
+      <br />
+
+      ${autocomplete.map(
+        (command) =>
+          html`
+            <button
+              data-autocomplete
+              @click=${(event) => {
+                setAutocomplete([]);
+                setCommand(event.target.innerText.trim());
+              }}
+              @focus=${(event) => {
+                element.querySelector("#bash").innerText =
+                  event.target.innerText.trim();
+                // handleSubmit(event.target.innerText);
+              }}
+            >
+              ${command}
+            </button>
+          `
+      )}
+      ${debug.current
+        ? html`
+            <h5>History</h5>
+
+            <ul>
+              ${history.map((command) => html`<li>${command}</li>`)}
+            </ul>
+          `
+        : ""}
+    </section>
+  `;
+}
+
+customElements.define(
+  "app-terminal",
+  component(Terminal, {
+    useShadowDOM: false,
+  })
+);
