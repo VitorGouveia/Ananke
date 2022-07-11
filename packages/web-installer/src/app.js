@@ -1,6 +1,9 @@
 import { Shortcuts } from "./functions/shortcut.js";
 
-// @TODO: create book
+// @TODO: create bootloader
+// @TODO: fix autocomplete
+// @TODO: add autocomplete to 'cd' command
+// @TODO: add autocomplete for commands flags
 // @TODO: manage system partitions and files
 
 const alphabet = "abcdefghijklmnopqrstuvwxyz";
@@ -194,6 +197,7 @@ const commandList = {
   ...(await import("./commands/emacs.js")),
   ...(await import("./commands/ls.js")),
   ...(await import("./commands/cd.js")),
+  ...(await import("./commands/repl.js")),
 };
 
 const { Folder } = await import("./components/folder.js");
@@ -274,7 +278,7 @@ function Terminal(element) {
   };
 
   // prettier-ignore
-  const handleSubmit = useCallback((_value) => {
+  const handleSubmit = useCallback(async (_value) => {
     /** @type {string} */
     const value = _value;
 
@@ -333,6 +337,26 @@ function Terminal(element) {
     const commandEXE = commandList[currentCommand];
 
     const result = commandEXE.render(...args);
+
+    if(Array.isArray(result)) {
+      // have an option to show the loading message after it finishes loading
+      // today the message just disappears
+      for (let piece of result) {
+        const commandObj = {
+          type: commandEXE.isGUI ? "virtual" : "text",
+          html: [bashSnapshot, await piece],
+        };
+
+        if (commandEXE.clear) {
+          setCommands([commandObj]);
+        } else {
+          setCommands([...commands, commandObj]);
+        }
+      }
+
+      return
+    }
+
 
     /** @type {{ type: "virtual" | "text", html: string }} */
     const commandObj = {
