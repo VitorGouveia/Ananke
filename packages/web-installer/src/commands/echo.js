@@ -20,7 +20,7 @@ export const echo = new Command.Create()
         return finalArg.replaceAll(/\\n/g, "\n");
       });
 
-      return replacedArgs;
+      return args.join(" ");
     },
   })
   .build();

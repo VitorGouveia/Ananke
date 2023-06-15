@@ -198,6 +198,7 @@ const commandList = {
   ...(await import("./commands/ls.js")),
   ...(await import("./commands/cd.js")),
   ...(await import("./commands/repl.js")),
+  ...(await import("./commands/lolcat.js")),
 };
 
 const { Folder } = await import("./components/folder.js");
@@ -534,6 +535,7 @@ function Terminal(element) {
     setAutocomplete,
   ]);
 
+  // ${Button.Ripple("oi")}
   return html`
     <section>
       ${commands.map((command) => {
