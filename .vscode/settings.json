@@ -1,9 +1,0 @@
-{
-  "deno.enablePaths": [
-    "packages/daemon"
-  ],
-  "deno.unstable": true,
-  "yaml.schemas": {
-    "https://json.schemastore.org/github-workflow.json": "file:///home/vitor/www/Nix/.github/workflows/build.yml"
-  }
-}

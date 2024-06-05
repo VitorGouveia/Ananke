@@ -1,4 +1,4 @@
-import { Shortcuts } from "./functions/shortcut.js";
+import { Shortcuts } from "./functions/shortcut.js"
 
 // @TODO: create bootloader
 // @TODO: fix autocomplete
@@ -6,21 +6,21 @@ import { Shortcuts } from "./functions/shortcut.js";
 // @TODO: add autocomplete for commands flags
 // @TODO: manage system partitions and files
 
-const alphabet = "abcdefghijklmnopqrstuvwxyz";
+const alphabet = "abcdefghijklmnopqrstuvwxyz"
 
-const shortcut = new Shortcuts();
+const shortcut = new Shortcuts()
 
-let SELECTED_TERMINAL_ID = 0;
+let SELECTED_TERMINAL_ID = 0
 
 function* TerminalID() {
-  var index = 0;
+  var index = 0
 
-  while (true) yield index++;
+  while (true) yield index++
 }
 
-const terminalIDGenerator = TerminalID();
+const terminalIDGenerator = TerminalID()
 
-const MOD = "ctrl";
+const MOD = "ctrl"
 // @TODO: listen to horizontal arrows for custom block cursor;
 
 /**
@@ -30,34 +30,34 @@ const GLOBAL_SHORTCUTS = {
   create_new_terminal: {
     key: `${MOD}+enter`,
     callback: (event) => {
-      event.preventDefault();
-      console.log("open new terminal");
+      event.preventDefault()
+      console.log("open new terminal")
     },
   },
   open_fullscreen_terminal: {
     key: `${MOD}+shift+f`,
     callback: (event) => {
-      event.preventDefault();
-      console.log("open fullscreen terminal");
+      event.preventDefault()
+      console.log("open fullscreen terminal")
     },
   },
   kill_window: {
     key: `ctrl+shift+c`,
     callback: (event) => {
-      event.preventDefault();
-      console.log("killing selected window!");
+      event.preventDefault()
+      console.log("killing selected window!")
     },
   },
-};
+}
 
 Object.entries(GLOBAL_SHORTCUTS).forEach(([_, { key, callback }]) => {
-  shortcut.add(key, callback);
-});
+  shortcut.add(key, callback)
+})
 
 /** SPLASH SCREEN */
 setTimeout(() => {
   // document.querySelector("#splash").setAttribute("hidden", "true");
-}, 2000);
+}, 2000)
 
 import {
   html,
@@ -66,15 +66,15 @@ import {
   useRef,
   useEffect,
   useCallback,
-} from "./deps.js";
+} from "./deps.js"
 
-import { ASCIIAnimation } from "./functions/ascii-animation.js";
+import { ASCIIAnimation } from "./functions/ascii-animation.js"
 
 // @TODO: component imports must be dynamic!
-import { Button } from "./components/button/index.js";
+import { Button } from "./components/button/index.js"
 
 // @TODO: add // @ts-check in all js files
-import { levenshteinDistance } from "./functions/levenshtein.js";
+import { levenshteinDistance } from "./functions/levenshtein.js"
 
 /**
  * this should really be a function that receives screen APIs
@@ -175,20 +175,20 @@ V::::::V           V::::::V              t:::::t                                
           "[======>  ]",
           "[=======> ]",
           "[========>]",
-        ];
+        ]
 
-        const container = document.createElement("div");
+        const container = document.createElement("div")
 
         new ASCIIAnimation(container, {
           animation,
           speed: 50,
-        });
+        })
 
-        return html`${container}`;
+        return html`${container}`
       })(),
     ],
   },
-};
+}
 
 /** @type {Record<string, import("./commands/command").Command>} */
 const commandList = {
@@ -199,9 +199,9 @@ const commandList = {
   ...(await import("./commands/cd.js")),
   ...(await import("./commands/repl.js")),
   ...(await import("./commands/lolcat.js")),
-};
+}
 
-const { Folder } = await import("./components/folder.js");
+const { Folder } = await import("./components/folder.js")
 
 /**
  *
@@ -209,13 +209,13 @@ const { Folder } = await import("./components/folder.js");
  * @returns
  */
 function Terminal(element) {
-  const id = useRef(terminalIDGenerator.next().value);
+  const id = useRef(terminalIDGenerator.next().value)
 
-  const [command, setCommand] = useState("");
-  const [commands, setCommands] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [autocomplete, setAutocomplete] = useState([]);
-  const debug = useRef(!!window.location.search.includes("debug"));
+  const [command, setCommand] = useState("")
+  const [commands, setCommands] = useState([])
+  const [history, setHistory] = useState([])
+  const [autocomplete, setAutocomplete] = useState([])
+  const debug = useRef(!!window.location.search.includes("debug"))
 
   const getBashSnapshot = useCallback(
     (value) => {
@@ -224,14 +224,14 @@ function Terminal(element) {
        * @returns {"green" | "red"}
        */
       const bashColor = () => {
-        const completableWords = [...Object.keys(commandList), ...history];
+        const completableWords = [...Object.keys(commandList), ...history]
 
         const perfectWordMatch = [...new Set(completableWords)].find((word) =>
           value.trim().includes(word.trim())
-        );
+        )
 
-        return perfectWordMatch ? "green" : "red";
-      };
+        return perfectWordMatch ? "green" : "red"
+      }
 
       const bashSnapshot = html`
         <div style="display: flex; align-items: center;">
@@ -257,26 +257,26 @@ function Terminal(element) {
             ${value}
           </div>
         </div>
-      `;
+      `
 
-      return bashSnapshot;
+      return bashSnapshot
     },
     [commandList, history]
-  );
+  )
 
   /**
    *
    * @param {ClipboardEvent} event
    */
   const handlePaste = (event) => {
-    event.stopPropagation();
-    event.preventDefault();
+    event.stopPropagation()
+    event.preventDefault()
 
-    const pastedData = event.clipboardData.getData("text");
+    const pastedData = event.clipboardData.getData("text")
 
-    element.querySelector("#bash").textContent = pastedData;
-    setCommand(pastedData);
-  };
+    element.querySelector("#bash").textContent = pastedData
+    setCommand(pastedData)
+  }
 
   // prettier-ignore
   const handleSubmit = useCallback(async (_value) => {
@@ -398,8 +398,8 @@ function Terminal(element) {
   }, [autocomplete, commands, command, setCommands]);
 
   useEffect(() => {
-    element.querySelector("#bash").focus();
-  }, []);
+    element.querySelector("#bash").focus()
+  }, [])
 
   // <KEYBINDINGS></KEYBINDINGS>
   useEffect(() => {
@@ -408,14 +408,14 @@ function Terminal(element) {
       submit: {
         key: "enter",
         callback: (event) => {
-          event.preventDefault();
+          event.preventDefault()
 
           if (document.activeElement.hasAttribute("data-autocomplete")) {
-            return;
+            return
           }
 
           // put command in queue
-          handleSubmit(command);
+          handleSubmit(command)
         },
       },
       autocomplete: {
@@ -423,19 +423,19 @@ function Terminal(element) {
         callback: (event) => {
           if (autocomplete.length > 0) {
             // select the elements
-            return;
+            return
           }
 
-          event.preventDefault();
+          event.preventDefault()
 
           const similarCommands = Object.keys(commandList).filter((cmd) =>
             cmd.startsWith(command.trim())
-          );
+          )
 
-          setAutocomplete(similarCommands);
+          setAutocomplete(similarCommands)
 
           // change color of the thing
-          element.querySelector("#bash").style.color = "green";
+          element.querySelector("#bash").style.color = "green"
         },
       },
       cancel: {
@@ -443,12 +443,12 @@ function Terminal(element) {
         callback: (event) => {
           // if text is selected then dont change default behaviour
           if (!window.getSelection().isCollapsed) {
-            return;
+            return
           }
 
-          event.preventDefault();
+          event.preventDefault()
 
-          const bashSnapshot = getBashSnapshot(command);
+          const bashSnapshot = getBashSnapshot(command)
 
           setCommands([
             ...commands,
@@ -456,30 +456,30 @@ function Terminal(element) {
               type: "text",
               html: [bashSnapshot, ""],
             },
-          ]);
+          ])
 
-          setCommand("");
-          element.querySelector("#bash").textContent = "";
+          setCommand("")
+          element.querySelector("#bash").textContent = ""
         },
       },
       clear: {
         key: "ctrl+l",
         callback: (event) => {
-          event.preventDefault();
+          event.preventDefault()
 
-          setCommands([]);
+          setCommands([])
         },
       },
       suspend: {
         key: "ctrl+x",
         callback: (event) => {
-          event.preventDefault();
+          event.preventDefault()
 
-          element.querySelector("#bash").textContent = "";
-          setCommand("");
+          element.querySelector("#bash").textContent = ""
+          setCommand("")
         },
       },
-    };
+    }
 
     // add keybinding for arrow up and down
     // search for commands in history
@@ -493,39 +493,39 @@ function Terminal(element) {
       ...LOCAL_SHORTCUTS,
       ...GLOBAL_SHORTCUTS,
     }).map(({ key }) => {
-      return key;
-    });
+      return key
+    })
 
-    const bash = element.querySelector("#bash");
+    const bash = element.querySelector("#bash")
 
     /**
      *
      * @param {KeyboardEvent} event
      */
     const handleKeydown = (event) => {
-      const key = event.key.toLowerCase();
+      const key = event.key.toLowerCase()
       // check if not forbidden shortcut
 
       if (alphabet.includes(key) && !(document.activeElement === bash)) {
-        event.preventDefault();
+        event.preventDefault()
 
-        element.querySelector("#bash").focus();
+        element.querySelector("#bash").focus()
       }
-    };
+    }
 
     if (SELECTED_TERMINAL_ID === id.current) {
-      window.addEventListener("keydown", handleKeydown);
+      window.addEventListener("keydown", handleKeydown)
     }
 
     return () => {
       Object.entries(LOCAL_SHORTCUTS).forEach(([name, { key }]) => {
-        shortcut.remove(key);
-      });
+        shortcut.remove(key)
+      })
 
       if (SELECTED_TERMINAL_ID === id.current) {
-        window.removeEventListener("keydown", handleKeydown);
+        window.removeEventListener("keydown", handleKeydown)
       }
-    };
+    }
   }, [
     command,
     commands,
@@ -533,13 +533,13 @@ function Terminal(element) {
     handleSubmit,
     autocomplete,
     setAutocomplete,
-  ]);
+  ])
 
   // ${Button.Ripple("oi")}
   return html`
     <section>
       ${commands.map((command) => {
-        const [bashSnapshot, commandResult] = command.html;
+        const [bashSnapshot, commandResult] = command.html
 
         /** @type {Record<string, string>} */
         const COMMAND_RENDER_METHODS = {
@@ -548,13 +548,13 @@ function Terminal(element) {
             ${bashSnapshot}
             <div class="text">${commandResult}</div>
           `,
-        };
-
-        if (!COMMAND_RENDER_METHODS[command.type]) {
-          return html` sorry could not render your bash! `;
         }
 
-        return COMMAND_RENDER_METHODS[command.type];
+        if (!COMMAND_RENDER_METHODS[command.type]) {
+          return html` sorry could not render your bash! `
+        }
+
+        return COMMAND_RENDER_METHODS[command.type]
       })}
 
       <div style="display: flex; align-items: center;">
@@ -569,19 +569,19 @@ function Terminal(element) {
           "
           @paste=${handlePaste}
           @input=${(event) => {
-            setCommand(event.target.innerText);
+            setCommand(event.target.innerText)
             // highlight
 
-            const completableWords = [...Object.keys(commandList), ...history];
+            const completableWords = [...Object.keys(commandList), ...history]
 
             const perfectWordMatch = [...new Set(completableWords)].find(
               (word) => event.target.innerText.trim().includes(word.trim())
-            );
+            )
 
             if (perfectWordMatch) {
-              event.target.style.color = "green";
+              event.target.style.color = "green"
             } else {
-              event.target.style.color = "red";
+              event.target.style.color = "red"
             }
           }}
         ></div>
@@ -590,23 +590,22 @@ function Terminal(element) {
       <br />
 
       ${autocomplete.map(
-        (command) =>
-          html`
-            <button
-              data-autocomplete
-              @click=${(event) => {
-                setAutocomplete([]);
-                setCommand(event.target.innerText.trim());
-              }}
-              @focus=${(event) => {
-                element.querySelector("#bash").innerText =
-                  event.target.innerText.trim();
-                // handleSubmit(event.target.innerText);
-              }}
-            >
-              ${command}
-            </button>
-          `
+        (command) => html`
+          <button
+            data-autocomplete
+            @click=${(event) => {
+              setAutocomplete([])
+              setCommand(event.target.innerText.trim())
+            }}
+            @focus=${(event) => {
+              element.querySelector("#bash").innerText =
+                event.target.innerText.trim()
+              // handleSubmit(event.target.innerText);
+            }}
+          >
+            ${command}
+          </button>
+        `
       )}
       ${debug.current
         ? html`
@@ -618,7 +617,7 @@ function Terminal(element) {
           `
         : ""}
     </section>
-  `;
+  `
 }
 
 customElements.define(
@@ -626,4 +625,4 @@ customElements.define(
   component(Terminal, {
     useShadowDOM: false,
   })
-);
+)
