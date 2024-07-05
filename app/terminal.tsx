@@ -2,6 +2,38 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react"
 
+/** Function that count occurrences of a substring in a string;
+ * @param {String} string               The string
+ * @param {String} subString            The sub string to search for
+ * @param {Boolean} [allowOverlapping]  Optional. (Default:false)
+ *
+ * @author Vitim.us https://gist.github.com/victornpb/7736865
+ * @see Unit Test https://jsfiddle.net/Victornpb/5axuh96u/
+ * @see https://stackoverflow.com/a/7924240/938822
+ */
+function occurrences(
+  string: string,
+  subString: string,
+  allowOverlapping: boolean
+) {
+  string += ""
+  subString += ""
+  if (subString.length <= 0) return string.length + 1
+
+  var n = 0,
+    pos = 0,
+    step = allowOverlapping ? 1 : subString.length
+
+  while (true) {
+    pos = string.indexOf(subString, pos)
+    if (pos >= 0) {
+      ++n
+      pos += step
+    } else break
+  }
+  return n
+}
+
 type Command = {
   id: string
   bashSnapshot?: {
@@ -21,10 +53,143 @@ type Command = {
     }
 )
 
+type Common = {
+  id: string
+  parentId: string | null
+  name: string
+
+  createdAt: number
+  updatedAt: number
+}
+
+type File = Common & {
+  content: string
+
+  extension: string
+  type: string
+}
+
+type Directory = Common & {
+  children: Array<File | Directory>
+}
+
+function createDirectory({
+  id,
+  name,
+  parentId,
+}: {
+  id: string
+  name: string
+  parentId: string | null
+}): Directory {
+  return {
+    id,
+    parentId,
+    createdAt: new Date().getTime(),
+    updatedAt: new Date().getTime(),
+
+    name,
+    children: [],
+  }
+}
+
+function createFile({
+  name,
+  parentId,
+  content,
+  extension,
+  type,
+}: {
+  name: string
+  parentId: string | null
+  content: string
+  extension: string
+  type: string
+}): File {
+  return {
+    id: crypto.randomUUID(),
+    parentId,
+    createdAt: new Date().getTime(),
+    updatedAt: new Date().getTime(),
+
+    name,
+    content,
+    extension,
+    type,
+  }
+}
+
+export const DEFAULT_USER_ID = "2"
+
+const FILE_STRUCTURE = [
+  createDirectory({
+    name: "home",
+    id: "1",
+    parentId: null,
+  }),
+  createDirectory({
+    name: "jarbas",
+    id: DEFAULT_USER_ID,
+    parentId: "1",
+  }),
+  createDirectory({
+    name: "Documents",
+    id: "5",
+    parentId: DEFAULT_USER_ID,
+  }),
+  createDirectory({
+    name: "DocumentsNested",
+    id: "15",
+    parentId: "5",
+  }),
+  createDirectory({
+    name: "DocumentsUltraNested",
+    id: "20",
+    parentId: "15",
+  }),
+  createDirectory({
+    name: "www",
+    id: "6",
+    parentId: DEFAULT_USER_ID,
+  }),
+  createDirectory({
+    name: ".config",
+    id: "3",
+    parentId: DEFAULT_USER_ID,
+  }),
+  createDirectory({
+    name: "bspwm",
+    id: "7",
+    parentId: "3",
+  }),
+  createFile({
+    name: "bspwmrc",
+    parentId: "7",
+    type: "rc",
+    extension: "",
+    content: JSON.stringify({
+      bspc: {
+        "border-width": 2,
+        "window-gap": 5,
+
+        focus: {
+          "border-color": "$PRIMARY",
+        },
+      },
+    }),
+  }),
+]
+
+const [HOME, DEFAULT_USER] = FILE_STRUCTURE
+
 function InputBox() {
   const user = "vitor.gouveia@MT2097-UBUNTU"
-  const folder = "www"
+  const [$HOME, set$HOME] = useState(`/${HOME.name}/${DEFAULT_USER?.name}`)
+  const [CWD, setCWD] = useState("5")
+  const [system, setSystem] = useState(FILE_STRUCTURE)
   const sign = "$"
+
+  const cwdEntity = system.find((f) => f.id === CWD)!
 
   const commandInputRef = useRef<HTMLParagraphElement>(null)
 
@@ -62,7 +227,7 @@ function InputBox() {
           result: currentCommand,
           type: "text",
           bashSnapshot: {
-            folder,
+            folder: cwdEntity.name,
             sign,
             user,
           },
@@ -105,6 +270,127 @@ function InputBox() {
 
       if (currentCommand === "clear") {
         clear(event)
+      }
+
+      if (currentCommand === "ls") {
+        const currentWorkingDirectory = system
+          .filter(({ parentId }) => parentId === CWD)
+          .sort((a, b) => a.name.localeCompare(b.name))
+
+        setCommands((commands) => [
+          ...commands,
+          {
+            id: crypto.randomUUID(),
+            type: "text",
+            result: currentWorkingDirectory.map(({ name }) => name).join(" "),
+          },
+        ])
+      }
+
+      if (currentCommand.trimStart().split(" ")[0] === "cd") {
+        setCurrentCommand("")
+        commandInputRef.current!.textContent = ""
+        const [_, path] = currentCommand.trimStart().split(" ")
+
+        const working_directory = system.find(({ id }) => CWD === id)
+
+        if (path.includes("..")) {
+          let slashCount = occurrences(path, "..", false)
+
+          let final_destination = null
+          let tmp_parentId = working_directory?.parentId
+
+          while (slashCount !== 0) {
+            slashCount -= 1
+
+            const parentDir = system.find(({ id }) => tmp_parentId === id)
+
+            if (!parentDir) {
+              final_destination = null
+              break
+            }
+
+            tmp_parentId = parentDir?.parentId
+
+            final_destination = parentDir
+          }
+
+          console.log(final_destination)
+          if (!final_destination) {
+            setCommands((commands) => [
+              ...commands,
+              {
+                id: crypto.randomUUID(),
+                type: "text",
+                result: `cd: no such file or directory: ${path}`,
+              },
+            ])
+            return
+          }
+
+          setCWD(final_destination?.id)
+          return
+        }
+
+        if (path.includes("/")) {
+          // cd Documents/DocumentsNested
+
+          const nestedFolders = path.split("/")
+          const newNestedFolders = []
+
+          for (let i = 0; i < nestedFolders.length; i++) {
+            const match = system.find(({ name }) => nestedFolders[i] === name)
+
+            if (!match) {
+              setCommands((commands) => [
+                ...commands,
+                {
+                  id: crypto.randomUUID(),
+                  type: "text",
+                  result: `cd: no such file or directory: ${path}`,
+                },
+              ])
+              return
+            }
+
+            newNestedFolders.push(match)
+          }
+
+          const finalFolder = newNestedFolders.pop()
+
+          if (!finalFolder) {
+            setCommands((commands) => [
+              ...commands,
+              {
+                id: crypto.randomUUID(),
+                type: "text",
+                result: `cd: no such file or directory: ${path}`,
+              },
+            ])
+            return
+          }
+
+          setCWD(finalFolder.id)
+        }
+
+        console.log({ path })
+        const newWorkingDirectory = system.find(
+          (directory) => directory.name === path && directory.parentId === CWD
+        )
+
+        if (!newWorkingDirectory) {
+          setCommands((commands) => [
+            ...commands,
+            {
+              id: crypto.randomUUID(),
+              type: "text",
+              result: `cd: no such file or directory: ${path}`,
+            },
+          ])
+          return
+        }
+
+        setCWD(newWorkingDirectory.id)
       }
 
       setCurrentCommand("")
@@ -244,7 +530,7 @@ function InputBox() {
         shortcuts.remove(keybind)
       })
     }
-  }, [currentCommand])
+  }, [CWD, currentCommand, cwdEntity.name, system])
 
   return (
     <>
@@ -258,11 +544,7 @@ function InputBox() {
         </Command>
       ))}
 
-      <div className="flex w-full items-center gap-2">
-        <span className="text-white">{user}</span>
-        <span className="text-yellow-500">~/{folder}</span>
-        <span className="text-white">{sign}</span>
-
+      <Command bashSnapshot={{ user, sign, folder: cwdEntity.name }}>
         <div
           ref={commandInputRef}
           contentEditable="plaintext-only"
@@ -273,7 +555,7 @@ function InputBox() {
           }
           suppressContentEditableWarning
         />
-      </div>
+      </Command>
     </>
   )
 }
